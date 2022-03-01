@@ -1163,6 +1163,30 @@ public:
     : binary_exprt(std::move(_lhs), ID_mod, std::move(_rhs))
   {
   }
+
+  /// The dividend of a division is the number that is being divided
+  exprt &dividend()
+  {
+    return op0();
+  }
+
+  /// The dividend of a division is the number that is being divided
+  const exprt &dividend() const
+  {
+    return op0();
+  }
+
+  /// The divisor of a division is the number the dividend is being divided by
+  exprt &divisor()
+  {
+    return op1();
+  }
+
+  /// The divisor of a division is the number the dividend is being divided by
+  const exprt &divisor() const
+  {
+    return op1();
+  }
 };
 
 template <>
@@ -1206,6 +1230,30 @@ public:
   euclidean_mod_exprt(exprt _lhs, exprt _rhs)
     : binary_exprt(std::move(_lhs), ID_euclidean_mod, std::move(_rhs))
   {
+  }
+
+  /// The dividend of a division is the number that is being divided
+  exprt &dividend()
+  {
+    return op0();
+  }
+
+  /// The dividend of a division is the number that is being divided
+  const exprt &dividend() const
+  {
+    return op0();
+  }
+
+  /// The divisor of a division is the number the dividend is being divided by
+  exprt &divisor()
+  {
+    return op1();
+  }
+
+  /// The divisor of a division is the number the dividend is being divided by
+  const exprt &divisor() const
+  {
+    return op1();
   }
 };
 

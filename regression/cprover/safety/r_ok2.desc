@@ -1,0 +1,9 @@
+KNOWNBUG
+r_ok2.c
+
+^EXIT=0$
+^SIGNAL=0$
+^program is safe / function int_assignment is safe: SUCCESS$
+^program is safe / function int_pointer_assignment is safe: SUCCESS$
+^program is safe / function pointer_assignment is safe: REFUTED$
+--

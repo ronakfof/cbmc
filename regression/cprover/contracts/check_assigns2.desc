@@ -1,0 +1,8 @@
+KNOWNBUG
+check_assigns2.c
+
+^EXIT=0$
+^SIGNAL=0$
+^program is safe / function my_function1 is safe: SUCCESS$
+^program is safe / function my_function2 is safe: SUCCESS$
+--

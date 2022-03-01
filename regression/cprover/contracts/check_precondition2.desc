@@ -1,0 +1,7 @@
+KNOWNBUG
+check_precondition2.c
+
+^EXIT=0$
+^SIGNAL=0$
+^program is safe / function caller is safe / call callee line .* is safe / precondition callee: SUCCESS$
+--

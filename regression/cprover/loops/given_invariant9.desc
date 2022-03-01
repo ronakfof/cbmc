@@ -1,0 +1,10 @@
+KNOWNBUG
+given_invariant9.c
+--safety
+^EXIT=0$
+^SIGNAL=0$
+^\[main\.invariant\.1\] line \d+ loop invariant: SUCCESS$
+^\[main\.array_bounds\.1\] line \d+ array 'array' lower bound in array\[.*i\]: SUCCESS$
+^\[main\.array_bounds\.2\] line \d+ array 'array' upper bound in array\[.*i\]: SUCCESS$
+--
+--

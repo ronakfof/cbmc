@@ -1,0 +1,7 @@
+KNOWNBUG
+cstring_preserved2.c
+
+^EXIT=0$
+^SIGNAL=0$
+^program is safe / function cstring_preserved is safe / line .* p is still a cstring: SUCCESS$
+--
