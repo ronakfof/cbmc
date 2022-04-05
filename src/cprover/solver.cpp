@@ -211,6 +211,10 @@ bool is_subsumed(
     if(a_conjunct == b)
       return true; // b is subsumed by a conjunct in a
 
+  // Invariant is empty? (true)
+  if(a1.empty() && a2.empty())
+    return false; // Doesn't subsume anything.
+
   cout_message_handlert message_handler;
   satcheckt satcheck(message_handler);
   bv_pointerst solver(ns, satcheck, message_handler);
