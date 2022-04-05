@@ -31,6 +31,7 @@ Author: Daniel Kroening, dkr@amazon.com
 
 #include "c_safety_checks.h"
 #include "help_formatter.h"
+#include "instrument_contracts.h"
 #include "instrument_given_invariants.h"
 #include "state_encoding.h"
 
@@ -92,6 +93,8 @@ int cprover_parse_optionst::main()
       return CPROVER_EXIT_INCORRECT_TASK;
     }
 
+    bool perform_inlining = !cmdline.isset("no-inline");
+
     config.set(cmdline);
     console_message_handlert message_handler;
 
@@ -101,12 +104,14 @@ int cprover_parse_optionst::main()
     adjust_float_expressions(goto_model);
     instrument_given_invariants(goto_model);
 
+    if(!perform_inlining)
+      instrument_contracts(goto_model);
+
     if(cmdline.isset("safety"))
       c_safety_checks(goto_model);
 
     label_properties(goto_model);
 
-    bool perform_inlining = !cmdline.isset("no-inline");
     // bool perform_inlining = false;
 
     if(perform_inlining)

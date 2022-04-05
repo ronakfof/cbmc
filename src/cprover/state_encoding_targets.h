@@ -94,7 +94,10 @@ public:
 
   void annotation(const std::string &text) override
   {
-    out << ';' << ' ' << text << '\n';
+    if(text.empty())
+      out << '\n';
+    else
+      out << ';' << ' ' << text << '\n';
   }
 
 protected:
@@ -113,7 +116,7 @@ public:
 
   void annotation(const std::string &text) override
   {
-    out << '\n' << text << '\n';
+    out << text << '\n';
   }
 
 protected:

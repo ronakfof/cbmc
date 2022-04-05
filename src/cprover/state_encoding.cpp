@@ -372,6 +372,12 @@ static exprt simplifying_not(exprt src)
     return not_exprt(src);
 }
 
+static bool has_contract(const code_with_contract_typet &contract)
+{
+  return !contract.assigns().empty() || !contract.requires().empty() ||
+         !contract.ensures().empty();
+}
+
 void state_encodingt::function_call_symbol(
   goto_programt::const_targett loc,
   encoding_targett &dest)
@@ -412,11 +418,18 @@ void state_encodingt::function_call_symbol(
     return;
   }
 
-  // Do we have a function body?
+  // Do we have contract?
+  if(has_contract(to_code_with_contract_type(function.type())))
+  {
+    return;
+  }
+
+  // Find the function
   auto f = goto_functions.function_map.find(identifier);
   if(f == goto_functions.function_map.end())
     DATA_INVARIANT(false, "failed find function in function_map");
 
+  // Do we have a function body?
   if(!f->second.body_available())
   {
     // no function body -- do LHS assignment nondeterministically, if any
@@ -656,15 +669,36 @@ void state_encoding(
   bool program_is_inlined,
   encoding_targett &dest)
 {
-  auto f_entry =
-    goto_model.goto_functions.function_map.find(goto_functionst::entry_point());
+  if(program_is_inlined)
+  {
+    auto f_entry = goto_model.goto_functions.function_map.find(
+      goto_functionst::entry_point());
 
-  if(f_entry == goto_model.goto_functions.function_map.end())
-    throw incorrect_goto_program_exceptiont("The program has no entry point");
+    if(f_entry == goto_model.goto_functions.function_map.end())
+      throw incorrect_goto_program_exceptiont("The program has no entry point");
 
-  dest.annotation("function " + id2string(f_entry->first));
+    dest.annotation("function " + id2string(f_entry->first));
 
-  state_encodingt{goto_model.goto_functions}(f_entry, dest);
+    state_encodingt{goto_model.goto_functions}(f_entry, dest);
+  }
+  else
+  {
+    // sort alphabetically
+    const auto sorted = goto_model.goto_functions.sorted();
+    const namespacet ns(goto_model.symbol_table);
+    for(auto &f : sorted)
+    {
+      const auto &symbol = ns.lookup(f->first);
+      if(
+        f->first == goto_functionst::entry_point() ||
+        has_contract(to_code_with_contract_type(symbol.type)))
+      {
+        dest.annotation("");
+        dest.annotation("function " + id2string(f->first));
+        state_encodingt{goto_model.goto_functions}(f, dest);
+      }
+    }
+  }
 }
 
 void format_hooks();

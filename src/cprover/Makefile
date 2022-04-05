@@ -6,6 +6,7 @@ SRC = c_safety_checks.cpp \
       format_hooks.cpp \
       free_symbols.cpp \
       help_formatter.cpp \
+      instrument_contracts.cpp \
       instrument_given_invariants.cpp \
       may_alias.cpp \
       propagate.cpp \
