@@ -398,6 +398,20 @@ void state_encodingt::function_call_symbol(
     return;
   }
 
+  // free is special-cased
+  if(identifier == "free")
+  {
+    auto state = state_expr();
+    PRECONDITION(loc->call_arguments().size() == 1);
+    auto address_evaluated = evaluate_expr(loc, state, loc->call_arguments()[0]);
+
+    exprt new_state = binary_exprt(
+      state, ID_deallocate, address_evaluated, state_typet());
+    dest << forall_states_expr(
+      loc, function_application_exprt(out_state_expr(loc), {new_state}));
+    return;
+  }
+
   // Do we have a function body?
   auto f = goto_functions.function_map.find(identifier);
   if(f == goto_functions.function_map.end())
