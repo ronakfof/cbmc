@@ -161,6 +161,33 @@ exprt simplify_ok_expr(ternary_exprt src, const namespacet &ns)
   return std::move(src);
 }
 
+exprt simplify_is_cstring_expr(binary_exprt src, const namespacet &ns)
+{
+  const auto &state = src.op0();
+  const auto &pointer = src.op1();
+
+  if(state.id() == ID_update_state)
+  {
+    const auto &update_state_expr = to_update_state_expr(state);
+
+    auto may_alias =
+      ::simple_may_alias(pointer, update_state_expr.address(), ns);
+
+    if(may_alias.is_false())
+    {
+      // different objects
+      auto new_cstring_expr = src;
+      new_cstring_expr.op0() = update_state_expr.state();
+      return new_cstring_expr;
+    }
+    else // maybe the same
+    {
+    }
+  }
+
+  return std::move(src);
+}
+
 exprt simplify_state_expr(exprt src, const namespacet &ns)
 {
   // operands first
@@ -186,10 +213,7 @@ exprt simplify_state_expr(exprt src, const namespacet &ns)
   }
   else if(src.id() == ID_is_cstring)
   {
-    const auto &binary_expr = to_binary_expr(src);
-    if(binary_expr.op0().id() == ID_update_state)
-    {
-    }
+    return simplify_is_cstring_expr(to_binary_expr(src), ns);
   }
 
   return src;
