@@ -11,6 +11,7 @@ Author:
 
 #include "propagate.h"
 
+#include <util/arith_tools.h>
 #include <util/byte_operators.h>
 #include <util/c_types.h>
 #include <util/cout_message.h>
@@ -41,39 +42,20 @@ exprt simplify_evaluate_update(
 
   const auto &update_state_expr = to_update_state_expr(evaluate_expr.state());
 
-  // Same address?
-  if(evaluate_expr.address() == update_state_expr.address())
-  {
-    return typecast_exprt::conditional_cast(
-      update_state_expr.new_value(), evaluate_expr.type());
-  }
+  auto may_alias =
+    ::may_alias(evaluate_expr.address(), update_state_expr.address(), ns);
 
-  // strict aliasing rule
-  if(!permitted_by_strict_aliasing(
-       evaluate_expr.type(), update_state_expr.new_value().type()))
+  if(may_alias.has_value())
   {
-    // The object is known to be different, because of strict aliasing.
-    // (ς[❝x❞:=V])(❝y❞) --> ς(❝y❞)
-    auto new_evaluate_expr = evaluate_expr;
-    new_evaluate_expr.state() = update_state_expr.state();
-    return std::move(new_evaluate_expr);
-  }
-
-  if(
-    is_object_field_element(evaluate_expr.address()) &&
-    is_object_field_element(update_state_expr.address()))
-  {
-    auto may_alias = ::simple_may_alias(
-      evaluate_expr.address(), update_state_expr.address(), ns);
-
-    if(may_alias.is_true())
+    // 'simple' case
+    if(may_alias->is_true())
     {
       // The object is known to be the same.
       // (ς[A:=V])(A) --> V
       return typecast_exprt::conditional_cast(
         update_state_expr.new_value(), evaluate_expr.type());
     }
-    else if(may_alias.is_false())
+    else if(may_alias->is_false())
     {
       // The object is known to be different.
       // (ς[❝x❞:=V])(❝y❞) --> ς(❝y❞)
@@ -88,7 +70,7 @@ exprt simplify_evaluate_update(
       auto new_evaluate_expr = evaluate_expr;
       new_evaluate_expr.state() = update_state_expr.state();
       return if_exprt(
-        std::move(may_alias),
+        std::move(*may_alias),
         typecast_exprt::conditional_cast(
           update_state_expr.new_value(), evaluate_expr.type()),
         std::move(new_evaluate_expr));
@@ -161,8 +143,22 @@ exprt simplify_ok_expr(ternary_exprt src, const namespacet &ns)
   return std::move(src);
 }
 
+static bool is_one(const exprt &src)
+{
+  if(src.id() == ID_typecast)
+    return is_one(to_typecast_expr(src).op());
+  else if(src.id() == ID_constant)
+  {
+    auto value_opt = numeric_cast<mp_integer>(src);
+    return value_opt.has_value() && *value_opt == 1;
+  }
+  else
+    return false;
+}
+
 exprt simplify_is_cstring_expr(binary_exprt src, const namespacet &ns)
 {
+  PRECONDITION(src.type().id() == ID_bool);
   const auto &state = src.op0();
   const auto &pointer = src.op1();
 
@@ -170,18 +166,37 @@ exprt simplify_is_cstring_expr(binary_exprt src, const namespacet &ns)
   {
     const auto &update_state_expr = to_update_state_expr(state);
 
-    auto may_alias =
-      ::simple_may_alias(pointer, update_state_expr.address(), ns);
+    auto cstring_in_old_state = src;
+    cstring_in_old_state.op0() = update_state_expr.state();
 
-    if(may_alias.is_false())
+    auto may_alias = ::may_alias(pointer, update_state_expr.address(), ns);
+
+    if(may_alias.has_value() && may_alias->is_false())
     {
       // different objects
-      auto new_cstring_expr = src;
-      new_cstring_expr.op0() = update_state_expr.state();
-      return new_cstring_expr;
+      // cstring(s[x:=v], p) --> cstring(s, p)
+      return cstring_in_old_state;
     }
-    else // maybe the same
+
+    // maybe the same
+
+    // Are we writing zero?
+    if(update_state_expr.new_value().is_zero())
     {
+      // cstring(s[p:=0], q) --> if p alias q then true else cstring(s, q)
+      return if_exprt(
+        same_object(pointer, update_state_expr.address()),
+        true_exprt(),
+        cstring_in_old_state);
+    }
+  }
+
+  if(pointer.id() == ID_plus)
+  {
+    auto &plus_expr = to_plus_expr(pointer);
+    if(plus_expr.operands().size() == 2 && is_one(plus_expr.op1()))
+    {
+      // is_cstring(ς, p + 1)) --> is_cstring(ς, p) ∨ ς(p)=0
     }
   }
 
