@@ -15,6 +15,7 @@ Author:
 #include <util/byte_operators.h>
 #include <util/c_types.h>
 #include <util/cout_message.h>
+#include <util/expr_util.h>
 #include <util/format_expr.h>
 #include <util/mathematical_expr.h>
 #include <util/namespace.h>
@@ -197,6 +198,13 @@ exprt simplify_is_cstring_expr(binary_exprt src, const namespacet &ns)
     if(plus_expr.operands().size() == 2 && is_one(plus_expr.op1()))
     {
       // is_cstring(ς, p + 1)) --> is_cstring(ς, p) ∨ ς(p)=0
+      auto new_is_cstring = src;
+      new_is_cstring.op1() = plus_expr.op0();
+      auto type = to_pointer_type(pointer.type()).base_type();
+      auto zero = from_integer(0, type);
+      auto is_zero =
+        equal_exprt(evaluate_exprt(state, plus_expr.op0(), type), zero);
+      return or_exprt(new_is_cstring, is_zero);
     }
   }
 
