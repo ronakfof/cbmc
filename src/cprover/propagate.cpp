@@ -175,7 +175,7 @@ exprt simplify_is_cstring_expr(binary_exprt src, const namespacet &ns)
     {
       // different objects
       // cstring(s[x:=v], p) --> cstring(s, p)
-      return cstring_in_old_state;
+      return std::move(cstring_in_old_state);
     }
 
     // maybe the same
