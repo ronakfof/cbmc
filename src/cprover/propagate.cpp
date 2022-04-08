@@ -238,6 +238,24 @@ exprt simplify_state_expr(exprt src, const namespacet &ns)
   {
     return simplify_is_cstring_expr(to_binary_expr(src), ns);
   }
+  else if(src.id() == ID_plus)
+  {
+    auto &plus_expr = to_plus_expr(src);
+    if(
+      src.type().id() == ID_pointer &&
+      plus_expr.op0().id() == ID_element_address)
+    {
+      // element_address(X, Y) + Z --> element_address(X, Y + Z)
+      auto new_element_address_expr = to_element_address_expr(plus_expr.op0());
+      new_element_address_expr.index() = plus_exprt(
+        new_element_address_expr.index(),
+        typecast_exprt::conditional_cast(
+          plus_expr.op1(), new_element_address_expr.index().type()));
+      new_element_address_expr.index() =
+        simplify_expr(new_element_address_expr.index(), ns);
+      return std::move(new_element_address_expr);
+    }
+  }
 
   return src;
 }
