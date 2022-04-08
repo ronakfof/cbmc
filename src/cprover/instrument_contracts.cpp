@@ -12,8 +12,30 @@ Author: Daniel Kroening, kroening@kroening.com
 #include "instrument_contracts.h"
 
 #include <util/c_types.h>
+#include <util/format_expr.h>
 
 #include <goto-programs/goto_model.h>
+
+#include <iostream>
+
+static bool
+permitted_by_assigns_clause(const exprt::operandst &assigns, const exprt &lhs)
+{
+  if(lhs.id() == ID_symbol)
+  {
+    for(auto &a : assigns)
+      if(lhs == a)
+        return true;
+  }
+
+  return false;
+}
+
+static bool
+is_procedure_local(const irep_idt &function_identifier, const exprt &lhs)
+{
+  return false;
+}
 
 void instrument_contracts(
   goto_functionst::function_mapt::value_type &f,
@@ -57,14 +79,47 @@ void instrument_contracts(
     }
   }
 
+  std::cout << "check: " << f.first << "\n";
+
   // assigns?
-  if(!contract.assigns().empty())
+  if(!contract.assigns().empty() || !contract.ensures().empty())
   {
+    std::cout << "assigns: " << f.first << "\n";
     for(auto it = body.instructions.begin(); it != body.instructions.end();
         it++)
     {
       if(it->is_assign())
       {
+        const auto &lhs = it->assign_lhs();
+
+        std::cout << "LHS: " << format(lhs) << "\n";
+
+        // is it in the 'assigns' clause?
+        if(permitted_by_assigns_clause(contract.assigns(), lhs))
+        {
+          std::cout << "LHS-assigns"
+                    << "\n";
+          // ok
+        }
+        else if(is_procedure_local(f.first, lhs))
+        {
+          std::cout << "LHS-procedure-local"
+                    << "\n";
+          // ok
+        }
+        else
+        {
+          std::cout << "LHS-fail"
+                    << "\n";
+          // maybe not ok
+          auto location = it->source_location();
+          location.set_property_class("assigns");
+          location.set_comment("assigns clause");
+          auto assertion_instruction =
+            goto_programt::make_assertion(false_exprt(), std::move(location));
+          body.insert_before_swap(it, assertion_instruction);
+          it++; // skip over the assertion we have just generated
+        }
       }
     }
   }

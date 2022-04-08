@@ -18,3 +18,9 @@ void my_function3(int *pointer)
 {
   *pointer = 10;
 }
+
+void my_function4(void) __CPROVER_assigns() // passes
+{
+  int local;
+  local = 10;
+}

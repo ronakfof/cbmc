@@ -3,6 +3,6 @@ check_postcondition1.c
 --no-inline
 ^EXIT=10$
 ^SIGNAL=0$
-^\[postcondition\.1\] check_postcondition1.c line \d+ postcondition: SUCCESS$
-^\[postcondition\.2\] check_postcondition1.c line \d+ postcondition: REFUTED$
+^\[postcondition\.1\] line \d+ postcondition: SUCCESS$
+^\[postcondition\.2\] line \d+ postcondition: REFUTED$
 --

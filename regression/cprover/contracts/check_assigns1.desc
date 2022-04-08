@@ -1,9 +1,7 @@
-KNOWNBUG
+CORE
 check_assigns1.c
-
-^EXIT=0$
+--no-inline
+^EXIT=10$
 ^SIGNAL=0$
-^program is safe / function my_function1 is safe: SUCCESS$
-^program is safe / function my_function2 is safe / assigns clause line .*: REFUTED$
-^program is safe / function my_function3 is safe / dereference line .*: SUCCESS$
+^\[my_function3\.assigns\.1\] line \d+ assigns clause: REFUTED$
 --
