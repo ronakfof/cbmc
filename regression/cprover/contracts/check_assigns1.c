@@ -6,8 +6,8 @@ void my_function1(void)
   global = 10;
 }
 
-void my_function2(int parameter)
-  __CPROVER_assigns() // fails
+void my_function2(int parameter) __CPROVER_assigns() // fails
+  __CPROVER_ensures(1)
 {
   global = 10;
 }

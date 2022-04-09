@@ -19,17 +19,39 @@ Author: Daniel Kroening, kroening@kroening.com
 
 #include <iostream>
 
-static bool
-permitted_by_assigns_clause(const exprt::operandst &assigns, const exprt &lhs)
+static exprt make_address(exprt src)
 {
+  if(src.id() == ID_dereference)
+  {
+    return to_dereference_expr(src).pointer();
+  }
+  else
+    return address_of_exprt(src);
+}
+
+static exprt
+make_assigns_assertion(const exprt::operandst &assigns, const exprt &lhs)
+{
+  // trivial?
   if(lhs.id() == ID_symbol)
   {
     for(auto &a : assigns)
       if(lhs == a)
-        return true;
+        return true_exprt();
   }
 
-  return false;
+  exprt::operandst disjuncts;
+
+  for(auto &a : assigns)
+  {
+    auto a_address = make_address(a);
+    auto lhs_address = make_address(lhs);
+    lhs_address =
+      typecast_exprt::conditional_cast(lhs_address, a_address.type());
+    disjuncts.push_back(equal_exprt(a_address, lhs_address));
+  }
+
+  return disjunction(disjuncts);
 }
 
 static bool
@@ -81,12 +103,9 @@ void instrument_contract_checks(
     }
   }
 
-  std::cout << "check: " << f.first << "\n";
-
   // assigns?
   if(!contract.assigns().empty() || !contract.ensures().empty())
   {
-    std::cout << "assigns: " << f.first << "\n";
     for(auto it = body.instructions.begin(); it != body.instructions.end();
         it++)
     {
@@ -94,34 +113,20 @@ void instrument_contract_checks(
       {
         const auto &lhs = it->assign_lhs();
 
-        std::cout << "LHS: " << format(lhs) << "\n";
+        // Parameter or local? Ignore.
+        if(is_procedure_local(f.first, lhs))
+          continue; // ok
 
-        // is it in the 'assigns' clause?
-        if(permitted_by_assigns_clause(contract.assigns(), lhs))
-        {
-          std::cout << "LHS-assigns"
-                    << "\n";
-          // ok
-        }
-        else if(is_procedure_local(f.first, lhs))
-        {
-          std::cout << "LHS-procedure-local"
-                    << "\n";
-          // ok
-        }
-        else
-        {
-          std::cout << "LHS-fail"
-                    << "\n";
-          // maybe not ok
-          auto location = it->source_location();
-          location.set_property_class("assigns");
-          location.set_comment("assigns clause");
-          auto assertion_instruction =
-            goto_programt::make_assertion(false_exprt(), std::move(location));
-          body.insert_before_swap(it, assertion_instruction);
-          it++; // skip over the assertion we have just generated
-        }
+        // maybe not ok
+        auto assigns_assertion =
+          make_assigns_assertion(contract.assigns(), lhs);
+        auto location = it->source_location();
+        location.set_property_class("assigns");
+        location.set_comment("assigns clause");
+        auto assertion_instruction = goto_programt::make_assertion(
+          std::move(assigns_assertion), std::move(location));
+        body.insert_before_swap(it, assertion_instruction);
+        it++; // skip over the assertion we have just generated
       }
     }
   }
