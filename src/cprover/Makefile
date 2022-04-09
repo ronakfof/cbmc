@@ -2,6 +2,7 @@ SRC = c_safety_checks.cpp \
       console.cpp \
       cprover_main.cpp \
       cprover_parse_options.cpp \
+      counterexample_found.cpp \
       equality_propagation.cpp \
       format_hooks.cpp \
       free_symbols.cpp \

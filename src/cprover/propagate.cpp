@@ -35,6 +35,11 @@ Author:
 
 std::size_t allocate_counter = 0;
 
+exprt simplify_state_expr(
+  exprt,
+  const std::unordered_set<symbol_exprt, irep_hash> &address_taken,
+  const namespacet &);
+
 exprt simplify_evaluate_update(
   evaluate_exprt evaluate_expr,
   const std::unordered_set<symbol_exprt, irep_hash> &address_taken,
@@ -83,7 +88,8 @@ exprt simplify_evaluate_update(
   auto same_object =
     ::same_object(evaluate_expr.address(), update_state_expr.address());
   auto object = update_state_expr.new_value();
-  auto offset = pointer_offset(evaluate_expr.address());
+  auto offset = simplify_state_expr(
+    pointer_offset(evaluate_expr.address()), address_taken, ns);
   auto byte_extract = make_byte_extract(object, offset, evaluate_expr.type());
   auto new_evaluate_expr = evaluate_expr;
   new_evaluate_expr.state() = update_state_expr.state();
@@ -173,6 +179,8 @@ exprt simplify_is_cstring_expr(
 
     auto cstring_in_old_state = src;
     cstring_in_old_state.op0() = update_state_expr.state();
+    auto simplified_cstring_in_old_state =
+      simplify_state_expr(cstring_in_old_state, address_taken, ns);
 
     auto may_alias =
       ::may_alias(pointer, update_state_expr.address(), address_taken, ns);
@@ -181,7 +189,7 @@ exprt simplify_is_cstring_expr(
     {
       // different objects
       // cstring(s[x:=v], p) --> cstring(s, p)
-      return std::move(cstring_in_old_state);
+      return simplified_cstring_in_old_state;
     }
 
     // maybe the same
@@ -193,7 +201,7 @@ exprt simplify_is_cstring_expr(
       return if_exprt(
         same_object(pointer, update_state_expr.address()),
         true_exprt(),
-        cstring_in_old_state);
+        simplified_cstring_in_old_state);
     }
   }
 
@@ -298,14 +306,13 @@ exprt simplify_state_expr(
   return src;
 }
 
-propagate_resultt propagate(
-  std::vector<framet> &frames,
+void propagate(
+  const std::vector<framet> &frames,
   const workt &work,
   const std::unordered_set<symbol_exprt, irep_hash> &address_taken,
   const namespacet &ns,
   const std::function<void(const symbol_exprt &, exprt)> &propagator)
 {
-  auto result = propagate_resultt::PROPAGATED;
   auto &f = frames[work.frame.index];
 
   for(const auto &implication : f.implications)
@@ -314,6 +321,13 @@ propagate_resultt propagate(
     auto lambda_expr = lambda_exprt({state_expr()}, work.invariant);
     auto instance = lambda_expr.instantiate({next_state});
     auto simplified1 = simplify_state_expr(instance, address_taken, ns);
+    auto simplified1a = simplify_state_expr(simplified1, address_taken, ns);
+    if(simplified1 != simplified1a)
+    {
+      std::cout << "SIMP1: " << format(simplified1) << "\n";
+      std::cout << "SIMPa: " << format(simplified1a) << "\n";
+      abort();
+    }
     auto simplified2 = simplify_expr(simplified1, ns);
 
     if(implication.lhs.id() == ID_function_application)
@@ -334,33 +348,5 @@ propagate_resultt propagate(
       auto cond = to_and_expr(implication.lhs).op1();
       propagator(state, implies_exprt(cond, simplified2));
     }
-    else
-    {
-      // these are preconditions, e.g., true ⇒ SInitial(ς)
-      auto cond = implies_exprt(implication.lhs, simplified2);
-      std::cout << "PREa: " << format(cond) << "\n";
-      auto cond_replaced = replace_evaluate(cond);
-      std::cout << "PREb: " << format(cond_replaced) << "\n";
-      auto cond_simplified = simplify_expr(cond_replaced, ns);
-      std::cout << "PREc: " << format(cond_simplified) << "\n";
-
-      // ask the solver
-      cout_message_handlert message_handler;
-      satcheckt satcheck(message_handler);
-      bv_pointerst solver(ns, satcheck, message_handler);
-      solver.set_to_false(cond_simplified);
-      switch(solver())
-      {
-      case decision_proceduret::resultt::D_SATISFIABLE:
-        result = propagate_resultt::CONFLICT;
-        break;
-      case decision_proceduret::resultt::D_UNSATISFIABLE:
-        break;
-      case decision_proceduret::resultt::D_ERROR:
-        throw "error reported by solver";
-      }
-    }
   }
-
-  return result;
 }

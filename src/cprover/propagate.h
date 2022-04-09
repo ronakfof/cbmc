@@ -16,17 +16,16 @@ Author:
 
 #include <unordered_set>
 
-enum class propagate_resultt
-{
-  PROPAGATED,
-  CONFLICT
-};
-
-propagate_resultt propagate(
-  std::vector<framet> &,
+void propagate(
+  const std::vector<framet> &,
   const workt &,
   const std::unordered_set<symbol_exprt, irep_hash> &address_taken,
   const namespacet &,
   const std::function<void(const symbol_exprt &, exprt)> &propagator);
+
+exprt simplify_state_expr(
+  exprt,
+  const std::unordered_set<symbol_exprt, irep_hash> &address_taken,
+  const namespacet &);
 
 #endif // CPROVER_CPROVER_PROPAGATE_H

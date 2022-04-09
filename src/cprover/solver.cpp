@@ -19,6 +19,7 @@ Author:
 #include <solvers/sat/satcheck.h>
 
 #include "console.h"
+#include "counterexample_found.h"
 #include "free_symbols.h"
 #include "propagate.h"
 #include "report_properties.h"
@@ -296,15 +297,13 @@ void solver(
     dump(frames, property, true, true);
     std::cout << '\n';
 
-    switch(propagate(frames, work, address_taken, ns, propagator))
+    if(counterexample_found(frames, work, ns))
     {
-    case propagate_resultt::CONFLICT:
       property.status = propertyt::REFUTED;
       return;
-
-    case propagate_resultt::PROPAGATED:
-      break;
     }
+
+    propagate(frames, work, address_taken, ns, propagator);
   }
 
   property.status = propertyt::PASS;
