@@ -243,6 +243,7 @@ bool is_subsumed(
 
 void solver(
   std::vector<framet> &frames,
+  const std::unordered_set<symbol_exprt, irep_hash> &address_taken,
   const namespacet &ns,
   std::vector<propertyt> &properties,
   std::size_t property_index)
@@ -295,7 +296,7 @@ void solver(
     dump(frames, property, true, true);
     std::cout << '\n';
 
-    switch(propagate(frames, work, ns, propagator))
+    switch(propagate(frames, work, address_taken, ns, propagator))
     {
     case propagate_resultt::CONFLICT:
       property.status = propertyt::REFUTED;
@@ -324,9 +325,11 @@ solver(const std::vector<exprt> &constraints, const namespacet &ns)
     return solver_resultt::ALL_PASS;
   }
 
+  const std::unordered_set<symbol_exprt, irep_hash> address_taken;
+
   // solve each property separately, in order of occurence
   for(std::size_t i = 0; i<properties.size(); i++)
-    solver(frames, ns, properties, i);
+    solver(frames, address_taken, ns, properties, i);
 
   // reporting
   report_properties(properties);

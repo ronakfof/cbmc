@@ -14,6 +14,8 @@ Author:
 
 #include "solver_types.h"
 
+#include <unordered_set>
+
 enum class propagate_resultt
 {
   PROPAGATED,
@@ -23,6 +25,7 @@ enum class propagate_resultt
 propagate_resultt propagate(
   std::vector<framet> &,
   const workt &,
+  const std::unordered_set<symbol_exprt, irep_hash> &address_taken,
   const namespacet &,
   const std::function<void(const symbol_exprt &, exprt)> &propagator);
 

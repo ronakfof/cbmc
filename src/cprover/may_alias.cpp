@@ -74,7 +74,11 @@ bool prefix_of(const typet &a, const typet &b, const namespacet &ns)
   return a_struct.is_prefix_of(b_struct) || b_struct.is_prefix_of(a_struct);
 }
 
-optionalt<exprt> may_alias(const exprt &a, const exprt &b, const namespacet &ns)
+optionalt<exprt> may_alias(
+  const exprt &a,
+  const exprt &b,
+  const std::unordered_set<symbol_exprt, irep_hash> &address_taken,
+  const namespacet &ns)
 {
   PRECONDITION(a.type().id() == ID_pointer);
   PRECONDITION(b.type().id() == ID_pointer);
@@ -115,8 +119,8 @@ optionalt<exprt> may_alias(const exprt &a, const exprt &b, const namespacet &ns)
       const auto &a_element_address = to_element_address_expr(a);
       const auto &b_element_address = to_element_address_expr(b);
 
-      auto base_may_alias =
-        may_alias(a_element_address.base(), b_element_address.base(), ns);
+      auto base_may_alias = may_alias(
+        a_element_address.base(), b_element_address.base(), address_taken, ns);
 
       CHECK_RETURN(base_may_alias.has_value());
 
@@ -144,7 +148,8 @@ optionalt<exprt> may_alias(const exprt &a, const exprt &b, const namespacet &ns)
       }
 
       if(a_field_address.component_name() == b_field_address.component_name())
-        return may_alias(a_field_address.base(), b_field_address.base(), ns);
+        return may_alias(
+          a_field_address.base(), b_field_address.base(), address_taken, ns);
       else
         return false_expr;
     }

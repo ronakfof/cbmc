@@ -37,14 +37,15 @@ std::size_t allocate_counter = 0;
 
 exprt simplify_evaluate_update(
   evaluate_exprt evaluate_expr,
+  const std::unordered_set<symbol_exprt, irep_hash> &address_taken,
   const namespacet &ns)
 {
   PRECONDITION(evaluate_expr.state().id() == ID_update_state);
 
   const auto &update_state_expr = to_update_state_expr(evaluate_expr.state());
 
-  auto may_alias =
-    ::may_alias(evaluate_expr.address(), update_state_expr.address(), ns);
+  auto may_alias = ::may_alias(
+    evaluate_expr.address(), update_state_expr.address(), address_taken, ns);
 
   if(may_alias.has_value())
   {
@@ -157,7 +158,10 @@ static bool is_one(const exprt &src)
     return false;
 }
 
-exprt simplify_is_cstring_expr(binary_exprt src, const namespacet &ns)
+exprt simplify_is_cstring_expr(
+  binary_exprt src,
+  const std::unordered_set<symbol_exprt, irep_hash> &address_taken,
+  const namespacet &ns)
 {
   PRECONDITION(src.type().id() == ID_bool);
   const auto &state = src.op0();
@@ -170,7 +174,8 @@ exprt simplify_is_cstring_expr(binary_exprt src, const namespacet &ns)
     auto cstring_in_old_state = src;
     cstring_in_old_state.op0() = update_state_expr.state();
 
-    auto may_alias = ::may_alias(pointer, update_state_expr.address(), ns);
+    auto may_alias =
+      ::may_alias(pointer, update_state_expr.address(), address_taken, ns);
 
     if(may_alias.has_value() && may_alias->is_false())
     {
@@ -211,11 +216,14 @@ exprt simplify_is_cstring_expr(binary_exprt src, const namespacet &ns)
   return std::move(src);
 }
 
-exprt simplify_state_expr(exprt src, const namespacet &ns)
+exprt simplify_state_expr(
+  exprt src,
+  const std::unordered_set<symbol_exprt, irep_hash> &address_taken,
+  const namespacet &ns)
 {
   // operands first
   for(auto &op : src.operands())
-    op = simplify_state_expr(op, ns);
+    op = simplify_state_expr(op, address_taken, ns);
 
   if(src.id() == ID_evaluate)
   {
@@ -223,7 +231,7 @@ exprt simplify_state_expr(exprt src, const namespacet &ns)
 
     if(evaluate_expr.state().id() == ID_update_state)
     {
-      return simplify_evaluate_update(evaluate_expr, ns);
+      return simplify_evaluate_update(evaluate_expr, address_taken, ns);
     }
     else if(evaluate_expr.state().id() == ID_allocate)
     {
@@ -236,7 +244,7 @@ exprt simplify_state_expr(exprt src, const namespacet &ns)
   }
   else if(src.id() == ID_is_cstring)
   {
-    return simplify_is_cstring_expr(to_binary_expr(src), ns);
+    return simplify_is_cstring_expr(to_binary_expr(src), address_taken, ns);
   }
   else if(src.id() == ID_plus)
   {
@@ -293,6 +301,7 @@ exprt simplify_state_expr(exprt src, const namespacet &ns)
 propagate_resultt propagate(
   std::vector<framet> &frames,
   const workt &work,
+  const std::unordered_set<symbol_exprt, irep_hash> &address_taken,
   const namespacet &ns,
   const std::function<void(const symbol_exprt &, exprt)> &propagator)
 {
@@ -304,7 +313,7 @@ propagate_resultt propagate(
     auto &next_state = implication.rhs.arguments().front();
     auto lambda_expr = lambda_exprt({state_expr()}, work.invariant);
     auto instance = lambda_expr.instantiate({next_state});
-    auto simplified1 = simplify_state_expr(instance, ns);
+    auto simplified1 = simplify_state_expr(instance, address_taken, ns);
     auto simplified2 = simplify_expr(simplified1, ns);
 
     if(implication.lhs.id() == ID_function_application)
