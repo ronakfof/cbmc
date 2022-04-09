@@ -266,6 +266,26 @@ exprt simplify_state_expr(exprt src, const namespacet &ns)
       return from_integer(0, pointer_offset_expr.type());
     }
   }
+  else if(src.id() == ID_equal)
+  {
+    const auto &equal_expr = to_equal_expr(src);
+    if(
+      equal_expr.lhs().id() == ID_pointer_object &&
+      equal_expr.rhs().id() == ID_pointer_object)
+    {
+      const auto &lhs_p = to_pointer_object_expr(equal_expr.lhs()).pointer();
+      const auto &rhs_p = to_pointer_object_expr(equal_expr.rhs()).pointer();
+      if(lhs_p.id() == ID_object_address && rhs_p.id() == ID_object_address)
+      {
+        if(
+          to_object_address_expr(lhs_p).object_identifier() ==
+          to_object_address_expr(rhs_p).object_identifier())
+          return true_exprt();
+        else
+          return false_exprt();
+      }
+    }
+  }
 
   return src;
 }
