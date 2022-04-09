@@ -1,7 +1,7 @@
-KNOWNBUG
+CORE
 recursive_function1.c
-
+--no-inline
 ^EXIT=0$
 ^SIGNAL=0$
-^program is safe / function recursive_function is safe / call recursive_function line 7 is safe / precondition recursive_function: SUCCESS$
+^\[recursive_function\.precondition\.1] line \d+ precondition recursive_function: SUCCESS$
 --

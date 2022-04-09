@@ -1,4 +1,4 @@
-CORE
+KNOWNBUG
 use_postcondition1.c
 --no-inline
 ^EXIT=0$

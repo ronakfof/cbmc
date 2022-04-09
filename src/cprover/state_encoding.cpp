@@ -446,12 +446,6 @@ void state_encodingt::function_call_symbol(
     return;
   }
 
-  // Do we have contract?
-  if(has_contract(to_code_with_contract_type(function.type())))
-  {
-    return;
-  }
-
   // Find the function
   auto f = goto_functions.function_map.find(identifier);
   if(f == goto_functions.function_map.end())
@@ -502,6 +496,15 @@ void state_encodingt::function_call_symbol(
     function_entry_state,
     nil_exprt(),
     dest);
+
+  // exit state of called function
+  auto exit_loc = std::prev(f->second.body.instructions.end());
+  irep_idt exit_state_identifier =
+    new_state_prefix + std::to_string(exit_loc->location_number);
+  auto exit_state = symbol_exprt(exit_state_identifier, state_predicate_type());
+
+  // now link up return state
+  dest << equal_exprt(out_state_expr(loc), std::move(exit_state));
 }
 
 void state_encodingt::function_call(

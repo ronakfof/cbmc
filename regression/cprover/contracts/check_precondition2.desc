@@ -1,7 +1,7 @@
-KNOWNBUG
+CORE
 check_precondition2.c
-
+--no-inline
 ^EXIT=0$
 ^SIGNAL=0$
-^program is safe / function caller is safe / call callee line .* is safe / precondition callee: SUCCESS$
+^\[caller\.precondition\.1\] line \d+ precondition callee: SUCCESS$
 --

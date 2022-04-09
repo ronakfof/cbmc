@@ -1,8 +1,8 @@
-KNOWNBUG
+CORE
 check_precondition1.c
-
-^EXIT=0$
+--no-inline
+^EXIT=10$
 ^SIGNAL=0$
-^program is safe / function main is safe / call my_function line 8 is safe / precondition my_function: REFUTED$
-^program is safe / function main is safe / call my_function line 9 is safe / precondition my_function: SUCCESS$
+^\[main\.precondition\.1\] line \d+ precondition my_function: REFUTED$
+^\[main\.precondition\.2\] line \d+ precondition my_function: SUCCESS$
 --

@@ -13,6 +13,7 @@ Author: Daniel Kroening, kroening@kroening.com
 
 #include <util/c_types.h>
 #include <util/format_expr.h>
+#include <util/replace_symbol.h>
 
 #include <goto-programs/goto_model.h>
 
@@ -37,7 +38,7 @@ is_procedure_local(const irep_idt &function_identifier, const exprt &lhs)
   return false;
 }
 
-void instrument_contracts(
+void instrument_contract_checks(
   goto_functionst::function_mapt::value_type &f,
   const namespacet &ns)
 {
@@ -126,10 +127,78 @@ void instrument_contracts(
   }
 }
 
+void replace_function_calls_by_contracts(
+  goto_functionst::function_mapt::value_type &f,
+  const goto_modelt &goto_model)
+{
+  auto &body = f.second.body;
+  const namespacet ns(goto_model.symbol_table);
+
+  for(auto it = body.instructions.begin(); it != body.instructions.end(); it++)
+  {
+    if(it->is_function_call())
+    {
+      const auto &function = it->call_function();
+      if(function.id() == ID_symbol)
+      {
+        const auto &symbol = ns.lookup(to_symbol_expr(function));
+
+        auto &contract = to_code_with_contract_type(symbol.type);
+
+        if(contract.requires().empty() && contract.ensures().empty())
+          continue;
+
+        // need to substitute parameters
+        const auto f_it =
+          goto_model.goto_functions.function_map.find(symbol.name);
+        if(f_it == goto_model.goto_functions.function_map.end())
+          DATA_INVARIANT(false, "failed to find function in function_map");
+
+        replace_symbolt replace_symbol;
+        const auto &parameters = to_code_type(symbol.type).parameters();
+        const auto &arguments = it->call_arguments();
+
+        for(std::size_t p = 0; p < f_it->second.parameter_identifiers.size();
+            p++)
+        {
+          auto p_symbol = symbol_exprt(
+            f_it->second.parameter_identifiers[p], parameters[p].type());
+          replace_symbol.insert(p_symbol, arguments[p]);
+        }
+
+        for(auto &precondition : contract.requires())
+        {
+          auto location = it->source_location();
+          location.set_property_class(ID_precondition);
+          location.set_comment(
+            "precondition " + id2string(symbol.display_name()));
+
+          auto replaced_precondition = precondition;
+          replace_symbol(replaced_precondition);
+
+          auto assertion_instruction =
+            goto_programt::make_assertion(replaced_precondition, location);
+
+          body.insert_before_swap(it, assertion_instruction);
+        }
+
+        // advance the iterator
+        it = std::next(it, contract.requires().size());
+
+        // remove the function call
+        it->turn_into_skip();
+      }
+    }
+  }
+}
+
 void instrument_contracts(goto_modelt &goto_model)
 {
   const namespacet ns(goto_model.symbol_table);
 
   for(auto &f : goto_model.goto_functions.function_map)
-    instrument_contracts(f, ns);
+  {
+    instrument_contract_checks(f, ns);
+    replace_function_calls_by_contracts(f, goto_model);
+  }
 }
