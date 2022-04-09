@@ -256,6 +256,16 @@ exprt simplify_state_expr(exprt src, const namespacet &ns)
       return std::move(new_element_address_expr);
     }
   }
+  else if(src.id() == ID_pointer_offset)
+  {
+    auto &pointer_offset_expr = to_pointer_offset_expr(src);
+
+    // pointer_offset(❝x❞) -> 0
+    if(pointer_offset_expr.pointer().id() == ID_object_address)
+    {
+      return from_integer(0, pointer_offset_expr.type());
+    }
+  }
 
   return src;
 }
@@ -302,12 +312,14 @@ propagate_resultt propagate(
       std::cout << "PREa: " << format(cond) << "\n";
       auto cond_replaced = replace_evaluate(cond);
       std::cout << "PREb: " << format(cond_replaced) << "\n";
+      auto cond_simplified = simplify_expr(cond_replaced, ns);
+      std::cout << "PREc: " << format(cond_simplified) << "\n";
 
       // ask the solver
       cout_message_handlert message_handler;
       satcheckt satcheck(message_handler);
       bv_pointerst solver(ns, satcheck, message_handler);
-      solver.set_to_false(cond_replaced);
+      solver.set_to_false(cond_simplified);
       switch(solver())
       {
       case decision_proceduret::resultt::D_SATISFIABLE:
