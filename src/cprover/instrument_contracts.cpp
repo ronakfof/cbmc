@@ -71,6 +71,7 @@ void instrument_contracts(
     for(auto &assertion : contract.ensures())
     {
       auto location = assertion.source_location();
+      location.set_function(f.first); // seems to be missing
       location.set_property_class(ID_postcondition);
       location.set_comment("postcondition");
       auto assertion_instruction =
