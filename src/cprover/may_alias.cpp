@@ -12,6 +12,7 @@ Author:
 #include "may_alias.h"
 
 #include <util/c_types.h>
+#include <util/format_expr.h>
 #include <util/format_type.h>
 #include <util/namespace.h>
 #include <util/pointer_expr.h>

@@ -59,6 +59,10 @@ protected:
     const exprt &,
     const exprt &,
     const std::unordered_set<symbol_exprt, irep_hash> &) const;
+  exprt replace_nondet_rec(
+    loct,
+    const exprt &,
+    std::vector<symbol_exprt> &nondet_symbols) const;
   exprt evaluate_expr(loct, const exprt &) const;
   exprt address_rec(loct, const exprt &, exprt) const;
   static exprt state_lambda_expr(exprt);
@@ -149,6 +153,35 @@ exprt state_encodingt::evaluate_expr(
   return evaluate_expr_rec(loc, state, what, {});
 }
 
+exprt state_encodingt::replace_nondet_rec(
+  loct loc,
+  const exprt &what,
+  std::vector<symbol_exprt> &nondet_symbols) const
+{
+  if(what.id() == ID_side_effect)
+  {
+    auto &side_effect = to_side_effect_expr(what);
+    auto statement = side_effect.get_statement();
+    if(statement == ID_nondet)
+    {
+      irep_idt identifier =
+        "nondet::" + state_prefix + std::to_string(loc->location_number);
+      auto symbol = symbol_exprt(identifier, side_effect.type());
+      nondet_symbols.push_back(symbol);
+      return std::move(symbol);
+    }
+    else
+      return what; // leave it
+  }
+  else
+  {
+    exprt tmp = what;
+    for(auto &op : tmp.operands())
+      op = replace_nondet_rec(loc, op, nondet_symbols);
+    return tmp;
+  }
+}
+
 exprt state_encodingt::evaluate_expr_rec(
   loct loc,
   const exprt &state,
@@ -173,18 +206,6 @@ exprt state_encodingt::evaluate_expr_rec(
     what.id() == ID_index)
   {
     return evaluate_exprt(state, address_rec(loc, state, what), what.type());
-  }
-  else if(what.id() == ID_side_effect)
-  {
-    auto &side_effect = to_side_effect_expr(what);
-    auto statement = side_effect.get_statement();
-    if(statement == ID_nondet)
-    {
-      irep_idt identifier = "nondet" + std::to_string(loc->location_number);
-      return symbol_exprt(identifier, side_effect.type());
-    }
-    else
-      return what;
   }
   else if(what.id() == ID_forall || what.id() == ID_exists)
   {
@@ -333,9 +354,16 @@ exprt state_encodingt::assignment_constraint(loct loc, exprt lhs, exprt rhs)
   const
 {
   auto s = state_expr();
+
   auto address = address_rec(loc, s, lhs);
-  exprt new_value = evaluate_expr(loc, s, rhs);
+
+  exprt rhs_evaluated = evaluate_expr(loc, s, rhs);
+
+  std::vector<symbol_exprt> nondet_symbols;
+  exprt new_value = replace_nondet_rec(loc, rhs_evaluated, nondet_symbols);
+
   auto new_state = update_state_exprt(s, address, new_value);
+
   return forall_states_expr(
     loc, function_application_exprt(out_state_expr(loc), {new_state}));
 }
