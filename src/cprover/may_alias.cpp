@@ -12,9 +12,12 @@ Author:
 #include "may_alias.h"
 
 #include <util/c_types.h>
+#include <util/format_type.h>
 #include <util/namespace.h>
 #include <util/pointer_expr.h>
 #include <util/std_expr.h>
+
+#include <iostream>
 
 bool permitted_by_strict_aliasing(const typet &a, const typet &b)
 {
@@ -33,7 +36,9 @@ bool permitted_by_strict_aliasing(const typet &a, const typet &b)
     return to_bitvector_type(a).get_width() == to_bitvector_type(b).get_width();
   }
   else
+  {
     return false;
+  }
 }
 
 bool is_object_field_element(const exprt &expr)
@@ -70,6 +75,9 @@ bool prefix_of(const typet &a, const typet &b, const namespacet &ns)
 
 optionalt<exprt> may_alias(const exprt &a, const exprt &b, const namespacet &ns)
 {
+  PRECONDITION(a.type().id() == ID_pointer);
+  PRECONDITION(b.type().id() == ID_pointer);
+
   static const auto true_expr = true_exprt();
   static const auto false_expr = false_exprt();
 
@@ -78,7 +86,10 @@ optionalt<exprt> may_alias(const exprt &a, const exprt &b, const namespacet &ns)
     return true_expr;
 
   // consider the strict aliasing rule
-  if(!permitted_by_strict_aliasing(a.type(), b.type()))
+  const auto &a_base = to_pointer_type(a.type()).base_type();
+  const auto &b_base = to_pointer_type(b.type()).base_type();
+
+  if(!permitted_by_strict_aliasing(a_base, b_base))
   {
     // The object is known to be different, because of strict aliasing.
     return false_expr;
