@@ -7,7 +7,8 @@ void callee() __CPROVER_ensures(global >= 10) __CPROVER_assigns(global)
 
 int main()
 {
+  global = 1;
   callee();
-  __CPROVER_assert(global >= 10, "property 1");
+  __CPROVER_assert(0, "property 1"); // should fail
   return 0;
 }

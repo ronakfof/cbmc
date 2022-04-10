@@ -1,9 +1,6 @@
 CORE
 check_assigns2.c
 --no-inline
-^EXIT=10$
+^EXIT=0$
 ^SIGNAL=0$
-^\[my_function1\.assigns\.1\] line \d+ assigns clause: REFUTED$
-^\[my_function2\.assigns\.1\] line \d+ assigns clause: REFUTED$
-^\[my_function2\.assigns\.2\] line \d+ assigns clause: REFUTED$
 --

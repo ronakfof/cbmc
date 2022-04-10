@@ -13,7 +13,9 @@ Author: Daniel Kroening, kroening@kroening.com
 
 #include <util/c_types.h>
 #include <util/format_expr.h>
+#include <util/prefix.h>
 #include <util/replace_symbol.h>
+#include <util/std_code.h>
 
 #include <goto-programs/goto_model.h>
 
@@ -29,11 +31,21 @@ static exprt make_address(exprt src)
     return address_of_exprt(src);
 }
 
+static bool is_symbol_member(const exprt &expr)
+{
+  if(expr.id() == ID_symbol)
+    return true;
+  else if(expr.id() == ID_member)
+    return is_symbol_member(to_member_expr(expr).struct_op());
+  else
+    return false;
+}
+
 static exprt
 make_assigns_assertion(const exprt::operandst &assigns, const exprt &lhs)
 {
   // trivial?
-  if(lhs.id() == ID_symbol)
+  if(is_symbol_member(lhs))
   {
     for(auto &a : assigns)
       if(lhs == a)
@@ -57,7 +69,20 @@ make_assigns_assertion(const exprt::operandst &assigns, const exprt &lhs)
 static bool
 is_procedure_local(const irep_idt &function_identifier, const exprt &lhs)
 {
-  return false;
+  if(lhs.id() == ID_member)
+    return is_procedure_local(
+      function_identifier, to_member_expr(lhs).struct_op());
+  else if(lhs.id() == ID_index)
+    return is_procedure_local(function_identifier, to_index_expr(lhs).array());
+  else if(lhs.id() == ID_symbol)
+  {
+    const auto &symbol_expr = to_symbol_expr(lhs);
+    return has_prefix(
+      id2string(symbol_expr.get_identifier()),
+      id2string(function_identifier) + "::");
+  }
+  else
+    return false;
 }
 
 void instrument_contract_checks(
@@ -189,6 +214,41 @@ void replace_function_calls_by_contracts(
 
         // advance the iterator
         it = std::next(it, contract.requires().size());
+
+        // havoc the 'assigned' variables
+        for(auto &lhs : contract.assigns())
+        {
+          auto location = it->source_location();
+
+          auto rhs = side_effect_expr_nondett(lhs.type(), location);
+          auto replaced_lhs = lhs;
+          replace_symbol(replaced_lhs);
+
+          auto assignment_instruction =
+            goto_programt::make_assignment(replaced_lhs, rhs, location);
+
+          body.insert_before_swap(it, assignment_instruction);
+        }
+
+        // advance the iterator
+        it = std::next(it, contract.assigns().size());
+
+        // assume the postconditions
+        for(auto &postcondition : contract.ensures())
+        {
+          auto &location = it->source_location();
+
+          auto replaced_postcondition = postcondition;
+          replace_symbol(replaced_postcondition);
+
+          auto assumption_instruction =
+            goto_programt::make_assumption(replaced_postcondition, location);
+
+          body.insert_before_swap(it, assumption_instruction);
+        }
+
+        // advance the iterator
+        it = std::next(it, contract.ensures().size());
 
         // remove the function call
         it->turn_into_skip();
