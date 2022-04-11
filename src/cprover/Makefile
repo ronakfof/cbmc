@@ -1,4 +1,5 @@
-SRC = c_safety_checks.cpp \
+SRC = address_taken.cpp \
+      c_safety_checks.cpp \
       console.cpp \
       cprover_main.cpp \
       cprover_parse_options.cpp \

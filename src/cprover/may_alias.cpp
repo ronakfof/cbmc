@@ -17,6 +17,7 @@ Author:
 #include <util/namespace.h>
 #include <util/pointer_expr.h>
 #include <util/std_expr.h>
+#include <util/symbol.h>
 
 #include <iostream>
 
@@ -72,6 +73,36 @@ bool prefix_of(const typet &a, const typet &b, const namespacet &ns)
   const auto &b_struct = to_struct_type(b);
 
   return a_struct.is_prefix_of(b_struct) || b_struct.is_prefix_of(a_struct);
+}
+
+static optionalt<object_address_exprt> find_object(const exprt &expr)
+{
+  if(expr.id() == ID_object_address)
+    return to_object_address_expr(expr);
+  else if(expr.id() == ID_field_address)
+    return find_object(to_field_address_expr(expr).base());
+  else if(expr.id() == ID_element_address)
+    return find_object(to_element_address_expr(expr).base());
+  else
+    return {};
+}
+
+// Is 'expr' on the stack and it's address is not taken?
+static bool stack_and_not_dirty(
+  const exprt &expr,
+  const std::unordered_set<symbol_exprt, irep_hash> &address_taken,
+  const namespacet &ns)
+{
+  auto object = find_object(expr);
+  if(object.has_value())
+  {
+    auto symbol_expr = object->object_expr();
+    const auto &symbol = ns.lookup(symbol_expr);
+    return !symbol.is_static_lifetime &&
+           address_taken.find(symbol_expr) == address_taken.end();
+  }
+  else
+    return false;
 }
 
 optionalt<exprt> may_alias(
@@ -156,6 +187,13 @@ optionalt<exprt> may_alias(
     else
       return false_expr;
   }
+
+  // is one of them stack-allocated and it's address is not taken?
+  if(stack_and_not_dirty(a, address_taken, ns))
+    return false_expr; // can't alias
+
+  if(stack_and_not_dirty(b, address_taken, ns))
+    return false_expr; // can't alias
 
   // we don't know
   return {};

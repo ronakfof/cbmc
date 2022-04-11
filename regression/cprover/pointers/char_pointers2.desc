@@ -1,4 +1,4 @@
-CORE
+KNOWNBUG
 char_pointers2.c
 --text --solve
 ^EXIT=0$

@@ -18,6 +18,7 @@ Author:
 #include <solvers/flattening/bv_pointers.h>
 #include <solvers/sat/satcheck.h>
 
+#include "address_taken.h"
 #include "console.h"
 #include "counterexample_found.h"
 #include "free_symbols.h"
@@ -312,6 +313,11 @@ void solver(
 solver_resultt
 solver(const std::vector<exprt> &constraints, const namespacet &ns)
 {
+  const auto address_taken = ::address_taken(constraints);
+
+  for(auto &a : address_taken)
+    std::cout << "address_taken: " << format(a) << '\n';
+
   auto frames = setup_frames(constraints);
 
   find_implications(constraints, frames);
@@ -323,8 +329,6 @@ solver(const std::vector<exprt> &constraints, const namespacet &ns)
     std::cout << "\nThere are no properties to show.\n";
     return solver_resultt::ALL_PASS;
   }
-
-  const std::unordered_set<symbol_exprt, irep_hash> address_taken;
 
   // solve each property separately, in order of occurence
   for(std::size_t i = 0; i<properties.size(); i++)

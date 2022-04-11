@@ -1,4 +1,4 @@
-CORE
+KNOWNBUG
 pointers9.c
 --text --solve
 ^EXIT=0$
