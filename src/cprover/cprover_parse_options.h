@@ -17,6 +17,7 @@ Author: Daniel Kroening, dkr@amazon.com
 #define CPROVER_OPTIONS                                                        \
   "(help)?h(version)"                                                          \
   "(smt2)(text)(outfile):"                                                     \
+  "(variables)"                                                                \
   "(safety)"                                                                   \
   "(solve)"                                                                    \
   "(inline)(no-inline)"                                                        \

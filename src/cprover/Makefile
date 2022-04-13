@@ -5,6 +5,7 @@ SRC = address_taken.cpp \
       cprover_parse_options.cpp \
       counterexample_found.cpp \
       equality_propagation.cpp \
+      find_variables.cpp \
       format_hooks.cpp \
       free_symbols.cpp \
       help_formatter.cpp \
@@ -17,6 +18,7 @@ SRC = address_taken.cpp \
       state_encoding.cpp \
       state_encoding_targets.cpp \
       solver.cpp \
+      variable_encoding.cpp \
       wcwidth.c \
       # Empty last line
 

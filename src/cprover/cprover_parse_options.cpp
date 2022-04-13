@@ -113,8 +113,9 @@ int cprover_parse_optionst::main()
     label_properties(goto_model);
 
     // bool perform_inlining = false;
+    bool variable_encoding = cmdline.isset("variables");
 
-    if(perform_inlining)
+    if(perform_inlining || variable_encoding)
     {
       std::cout << "Performing inlining\n";
       goto_inline(goto_model, message_handler, false);
@@ -141,7 +142,7 @@ int cprover_parse_optionst::main()
       goto_model.validate();
     }
 
-    if(cmdline.isset("smt2") || cmdline.isset("text"))
+    if(cmdline.isset("smt2") || cmdline.isset("text") || variable_encoding)
     {
       auto format = cmdline.isset("smt2") ? state_encoding_formatt::SMT2
                                           : state_encoding_formatt::ASCII;
@@ -160,11 +161,20 @@ int cprover_parse_optionst::main()
           return CPROVER_EXIT_PARSE_ERROR;
         }
 
-        state_encoding(goto_model, format, perform_inlining, out);
+        if(variable_encoding)
+          ::variable_encoding(goto_model, format, out);
+        else
+          state_encoding(goto_model, format, perform_inlining, out);
+
         std::cout << "formula written to " << file_name << '\n';
       }
       else
-        state_encoding(goto_model, format, perform_inlining, std::cout);
+      {
+        if(variable_encoding)
+          ::variable_encoding(goto_model, format, std::cout);
+        else
+          state_encoding(goto_model, format, perform_inlining, std::cout);
+      }
 
       if(!cmdline.isset("solve"))
         return CPROVER_EXIT_SUCCESS;

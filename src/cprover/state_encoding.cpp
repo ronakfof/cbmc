@@ -21,6 +21,7 @@ Author:
 #include "solver.h"
 #include "state.h"
 #include "state_encoding_targets.h"
+#include "variable_encoding.h"
 
 #include <iostream>
 
@@ -755,6 +756,40 @@ void state_encoding(
     const namespacet ns(goto_model.symbol_table);
     smt2_encoding_targett dest(ns, out);
     state_encoding(goto_model, program_is_inlined, dest);
+  }
+  break;
+  }
+}
+
+void variable_encoding(
+  const goto_modelt &goto_model,
+  state_encoding_formatt state_encoding_format,
+  std::ostream &out)
+{
+  const namespacet ns(goto_model.symbol_table);
+
+  format_hooks();
+
+  container_encoding_targett container;
+  state_encoding(goto_model, true, container);
+
+  equality_propagation(container.constraints);
+
+  variable_encoding(container.constraints);
+
+  switch(state_encoding_format)
+  {
+  case state_encoding_formatt::ASCII:
+  {
+    ascii_encoding_targett dest(out);
+    dest << container;
+  }
+  break;
+
+  case state_encoding_formatt::SMT2:
+  {
+    smt2_encoding_targett dest(ns, out);
+    dest << container;
   }
   break;
   }

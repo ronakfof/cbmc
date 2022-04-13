@@ -33,4 +33,9 @@ void state_encoding(
 solver_resultt
 state_encoding_solver(const goto_modelt &, bool program_is_inlined);
 
+void variable_encoding(
+  const goto_modelt &,
+  state_encoding_formatt,
+  std::ostream &out);
+
 #endif // CPROVER_CPROVER_STATE_ENCODING_H
