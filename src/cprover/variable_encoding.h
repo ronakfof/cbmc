@@ -14,6 +14,6 @@ Author:
 
 #include <util/expr.h>
 
-void variable_encoding(const std::vector<exprt> &);
+void variable_encoding(std::vector<exprt> &);
 
 #endif // CPROVER_CPROVER_VARIABLE_ENDCODING_H
