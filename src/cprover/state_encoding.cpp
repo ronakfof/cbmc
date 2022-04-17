@@ -195,7 +195,13 @@ exprt state_encodingt::evaluate_expr_rec(
   {
     const auto &symbol_expr = to_symbol_expr(what);
 
-    if(bound_symbols.find(symbol_expr) == bound_symbols.end())
+    if(symbol_expr.get_identifier() == "__CPROVER_return_value")
+    {
+      auto new_symbol = symbol_exprt("return_value", what.type());
+      return evaluate_exprt(
+        state, address_rec(loc, state, new_symbol), what.type());
+    }
+    else if(bound_symbols.find(symbol_expr) == bound_symbols.end())
     {
       return evaluate_exprt(state, address_rec(loc, state, what), what.type());
     }

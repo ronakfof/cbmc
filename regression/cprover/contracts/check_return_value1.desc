@@ -1,8 +1,8 @@
-KNOWNBUG
+CORE
 check_return_value1.c
-
-^EXIT=0$
+--no-inline
+^EXIT=10$
 ^SIGNAL=0$
-^program is safe / function my_function1 is safe / postcondition: SUCCESS$
-^program is safe / function my_function2 is safe / postcondition: REFUTED$
+^\[my_function1\.postcondition\.1\] line \d+ postcondition: SUCCESS$
+^\[my_function2\.postcondition\.1\] line \d+ postcondition: REFUTED$
 --
