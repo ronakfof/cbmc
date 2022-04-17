@@ -175,7 +175,9 @@ void replace_function_calls_by_contracts(
 
         auto &contract = to_code_with_contract_type(symbol.type);
 
-        if(contract.requires().empty() && contract.ensures().empty())
+        if(
+          contract.requires().empty() && contract.ensures().empty() &&
+          contract.assigns().empty())
           continue;
 
         // need to substitute parameters
