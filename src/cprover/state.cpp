@@ -29,13 +29,31 @@ exprt replace_evaluate(exprt src)
 
   if(src.id() == ID_evaluate)
   {
-    auto &evaluate_expr = to_binary_expr(src);
-    if(evaluate_expr.op1().id() == ID_object_address)
+    auto &evaluate_expr = to_evaluate_expr(src);
+    auto &address = evaluate_expr.address();
+    if(address.id() == ID_object_address)
     {
-      const auto &object_address = to_object_address_expr(evaluate_expr.op1());
+      const auto &object_address = to_object_address_expr(address);
       auto id = object_address.object_identifier();
       return symbol_exprt(
         "evaluate-" + id2string(id), object_address.object_type());
+    }
+    else if(address.id() == ID_element_address)
+    {
+      auto &element_address_expr = to_element_address_expr(address);
+      if(element_address_expr.base().id() == ID_object_address)
+      {
+        const auto &object_address =
+          to_object_address_expr(element_address_expr.base());
+        auto id = object_address.object_identifier();
+        auto index = replace_evaluate(element_address_expr.index());
+        auto object_type =
+          array_typet(object_address.object_type(), nil_exprt());
+        return index_exprt(
+          symbol_exprt("evaluate-" + id2string(id), object_type),
+          index,
+          element_address_expr.element_type());
+      }
     }
   }
 
