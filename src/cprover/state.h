@@ -193,4 +193,11 @@ inline const allocate_exprt &to_allocate_expr(const exprt &expr)
 
 exprt replace_evaluate(exprt);
 
+extern const irep_idt ID_state_is_cstring;
+extern const irep_idt ID_state_live_object;
+extern const irep_idt ID_state_object_size;
+extern const irep_idt ID_state_r_ok;
+extern const irep_idt ID_state_w_ok;
+extern const irep_idt ID_state_rw_ok;
+
 #endif // CPROVER_CPROVER_STATE_H

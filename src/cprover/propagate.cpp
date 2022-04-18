@@ -35,7 +35,7 @@ Author:
 
 std::size_t allocate_counter = 0;
 
-exprt simplify_state_expr(
+exprt simplify_state_expr_node(
   exprt,
   const std::unordered_set<symbol_exprt, irep_hash> &address_taken,
   const namespacet &);
@@ -88,7 +88,7 @@ exprt simplify_evaluate_update(
   auto same_object =
     ::same_object(evaluate_expr.address(), update_state_expr.address());
   auto object = update_state_expr.new_value();
-  auto offset = simplify_state_expr(
+  auto offset = simplify_state_expr_node(
     pointer_offset(evaluate_expr.address()), address_taken, ns);
   auto byte_extract = make_byte_extract(object, offset, evaluate_expr.type());
   auto new_evaluate_expr = evaluate_expr;
@@ -124,31 +124,102 @@ exprt simplify_evaluate_allocate(
   }
 }
 
-exprt simplify_ok_expr(ternary_exprt src, const namespacet &ns)
+exprt simplify_object_expression_rec(exprt src)
+{
+  if(src.id() == ID_object_address)
+    return src;
+  else if(src.id() == ID_element_address)
+    return simplify_object_expression_rec(to_element_address_expr(src).base());
+  else if(src.id() == ID_plus)
+  {
+    const auto &plus_expr = to_plus_expr(src);
+    for(auto &op : plus_expr.operands())
+      if(op.type().id() == ID_pointer)
+        return simplify_object_expression_rec(op);
+    return src; // no change
+  }
+  else
+    return src;
+}
+
+exprt simplify_object_expression(exprt src)
+{
+  return simplify_object_expression_rec(src);
+}
+
+exprt simplify_live_object_expr(binary_exprt src, const namespacet &ns)
 {
   const auto &pointer = src.op1();
-  const auto &size = src.op2();
 
-  if(pointer.id() == ID_object_address)
+  auto object = simplify_object_expression(pointer);
+
+  if(object.id() == ID_object_address)
   {
     const auto &symbol =
-      ns.lookup(to_object_address_expr(pointer).object_identifier());
+      ns.lookup(to_object_address_expr(object).object_identifier());
     if(symbol.is_static_lifetime)
     {
-      auto symbol_size = size_of_expr(symbol.type, ns);
-      if(symbol_size.has_value())
-        return binary_relation_exprt(size, ID_le, *symbol_size);
+      return true_exprt(); // always live
     }
     else
     {
       // might be 'dead'
-      auto symbol_size = size_of_expr(symbol.type, ns);
-      if(symbol_size.has_value())
-        return binary_relation_exprt(size, ID_le, *symbol_size);
+      return true_exprt();
     }
   }
+  else
+    return std::move(src);
+}
 
-  return std::move(src);
+exprt simplify_object_size_expr(binary_exprt src, const namespacet &ns)
+{
+  const auto &pointer = src.op1();
+
+  auto object = simplify_object_expression(pointer);
+
+  if(object.id() == ID_object_address)
+  {
+    const auto &symbol =
+      ns.lookup(to_object_address_expr(object).object_identifier());
+    auto size_opt = size_of_expr(symbol.type, ns);
+    if(size_opt.has_value())
+      return typecast_exprt::conditional_cast(*size_opt, src.type());
+    else
+      return src; // no change
+  }
+  else
+    return std::move(src);
+}
+
+exprt simplify_ok_expr(
+  ternary_exprt src,
+  const std::unordered_set<symbol_exprt, irep_hash> &address_taken,
+  const namespacet &ns)
+{
+  const auto &state = src.op0();
+  const auto &pointer = src.op1();
+  const auto &size = src.op2();
+
+  // rewrite X_ok(p, s)
+  //  --> live_object(p) ∧ offset(p)≥0 ∧ offset(p)+s≤object_size(p)
+  auto live_object =
+    binary_predicate_exprt(state, ID_state_live_object, pointer);
+  auto live_object_simplified =
+    simplify_state_expr_node(live_object, address_taken, ns);
+  auto ssize_type = signed_size_type();
+  auto offset = pointer_offset_exprt(pointer, ssize_type);
+  auto offset_simplified = simplify_state_expr_node(offset, address_taken, ns);
+  auto lower = binary_relation_exprt(
+    offset_simplified, ID_ge, from_integer(0, ssize_type));
+  auto object_size =
+    binary_exprt(state, ID_state_object_size, pointer, ssize_type);
+  auto object_size_simplified =
+    simplify_state_expr_node(object_size, address_taken, ns);
+  auto size_casted = typecast_exprt::conditional_cast(size, ssize_type);
+  auto upper = binary_relation_exprt(
+    plus_exprt(offset_simplified, size_casted), ID_le, object_size_simplified);
+
+  return and_exprt(live_object_simplified, lower, upper);
 }
 
 static bool is_one(const exprt &src)
@@ -180,7 +251,7 @@ exprt simplify_is_cstring_expr(
     auto cstring_in_old_state = src;
     cstring_in_old_state.op0() = update_state_expr.state();
     auto simplified_cstring_in_old_state =
-      simplify_state_expr(cstring_in_old_state, address_taken, ns);
+      simplify_state_expr_node(cstring_in_old_state, address_taken, ns);
 
     auto may_alias =
       ::may_alias(pointer, update_state_expr.address(), address_taken, ns);
@@ -224,15 +295,11 @@ exprt simplify_is_cstring_expr(
   return std::move(src);
 }
 
-exprt simplify_state_expr(
+exprt simplify_state_expr_node(
   exprt src,
   const std::unordered_set<symbol_exprt, irep_hash> &address_taken,
   const namespacet &ns)
 {
-  // operands first
-  for(auto &op : src.operands())
-    op = simplify_state_expr(op, address_taken, ns);
-
   if(src.id() == ID_evaluate)
   {
     auto &evaluate_expr = to_evaluate_expr(src);
@@ -246,11 +313,17 @@ exprt simplify_state_expr(
       return simplify_evaluate_allocate(evaluate_expr, ns);
     }
   }
-  else if(src.id() == ID_r_ok || src.id() == ID_w_ok || src.id() == ID_rw_ok)
+  else if(
+    src.id() == ID_state_r_ok || src.id() == ID_state_w_ok ||
+    src.id() == ID_state_rw_ok)
   {
-    return simplify_ok_expr(to_ternary_expr(src), ns);
+    return simplify_ok_expr(to_ternary_expr(src), address_taken, ns);
   }
-  else if(src.id() == ID_is_cstring)
+  else if(src.id() == ID_state_live_object)
+  {
+    return simplify_live_object_expr(to_binary_expr(src), ns);
+  }
+  else if(src.id() == ID_state_is_cstring)
   {
     return simplify_is_cstring_expr(to_binary_expr(src), address_taken, ns);
   }
@@ -282,6 +355,10 @@ exprt simplify_state_expr(
       return from_integer(0, pointer_offset_expr.type());
     }
   }
+  else if(src.id() == ID_state_object_size)
+  {
+    return simplify_object_size_expr(to_binary_expr(src), ns);
+  }
   else if(src.id() == ID_equal)
   {
     const auto &equal_expr = to_equal_expr(src);
@@ -302,6 +379,21 @@ exprt simplify_state_expr(
       }
     }
   }
+
+  return src;
+}
+
+exprt simplify_state_expr(
+  exprt src,
+  const std::unordered_set<symbol_exprt, irep_hash> &address_taken,
+  const namespacet &ns)
+{
+  // operands first, recursively
+  for(auto &op : src.operands())
+    op = simplify_state_expr(op, address_taken, ns);
+
+  // now the node itself
+  src = simplify_state_expr_node(src, address_taken, ns);
 
   return src;
 }

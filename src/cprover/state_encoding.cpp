@@ -240,7 +240,10 @@ exprt state_encodingt::evaluate_expr_rec(
       evaluate_expr_rec(loc, state, r_or_w_ok_expr.pointer(), bound_symbols);
     auto size =
       evaluate_expr_rec(loc, state, r_or_w_ok_expr.size(), bound_symbols);
-    return ternary_exprt(what.id(), state, pointer, size, what.type());
+    auto new_id = what.id() == ID_r_ok   ? ID_state_r_ok
+                  : what.id() == ID_w_ok ? ID_state_w_ok
+                                         : ID_state_rw_ok;
+    return ternary_exprt(new_id, state, pointer, size, what.type());
   }
   else if(what.id() == ID_is_cstring)
   {
@@ -248,7 +251,7 @@ exprt state_encodingt::evaluate_expr_rec(
     const auto &is_cstring_expr = to_unary_expr(what);
     auto pointer =
       evaluate_expr_rec(loc, state, is_cstring_expr.op(), bound_symbols);
-    return binary_predicate_exprt(state, what.id(), pointer);
+    return binary_predicate_exprt(state, ID_state_is_cstring, pointer);
   }
   else
   {

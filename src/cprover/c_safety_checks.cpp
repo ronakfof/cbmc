@@ -32,6 +32,33 @@ exprt index_array_size(const typet &type)
 }
 
 void c_safety_checks_rec(
+  goto_functionst::function_mapt::value_type &,
+  const exprt::operandst &guards,
+  const exprt &,
+  const namespacet &,
+  goto_programt &);
+
+void c_safety_checks_address_rec(
+  goto_functionst::function_mapt::value_type &f,
+  const exprt::operandst &guards,
+  const exprt &expr,
+  const namespacet &ns,
+  goto_programt &dest)
+{
+  if(expr.id() == ID_index)
+  {
+    const auto &index_expr = to_index_expr(expr);
+    c_safety_checks_address_rec(f, guards, index_expr.array(), ns, dest);
+    c_safety_checks_rec(f, guards, index_expr.index(), ns, dest);
+  }
+  else if(expr.id() == ID_member)
+  {
+    c_safety_checks_address_rec(
+      f, guards, to_member_expr(expr).struct_op(), ns, dest);
+  }
+}
+
+void c_safety_checks_rec(
   goto_functionst::function_mapt::value_type &f,
   const exprt::operandst &guards,
   const exprt &expr,
@@ -40,6 +67,9 @@ void c_safety_checks_rec(
 {
   if(expr.id() == ID_address_of)
   {
+    c_safety_checks_address_rec(
+      f, guards, to_address_of_expr(expr).object(), ns, dest);
+    return;
   }
   else if(expr.id() == ID_and)
   {
@@ -145,7 +175,9 @@ void c_safety_checks_rec(
     auto condition = and_exprt(
       binary_relation_exprt(zero, ID_le, index_expr.index()),
       binary_relation_exprt(size, ID_gt, index_expr.index()));
-    auto source_location = expr.source_location();
+    // 'index' may not have a source location, e.g., when implicitly
+    // taking the address of an array.
+    auto source_location = expr.find_source_location();
     condition.add_source_location() = expr.source_location();
     source_location.set_property_class("array bounds");
     source_location.set_comment("array bounds in " + expr2c(expr, ns));

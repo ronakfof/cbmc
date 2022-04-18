@@ -21,6 +21,15 @@ void format_hooks()
     });
 
   add_format_hook(
+    ID_state_object_size,
+    [](std::ostream &os, const exprt &expr) -> std::ostream & {
+      const auto &object_size_expr = to_binary_expr(expr);
+      os << "object_size(" << format(object_size_expr.op0()) << ", "
+         << format(object_size_expr.op1()) << ')';
+      return os;
+    });
+
+  add_format_hook(
     ID_field_address,
     [](std::ostream &os, const exprt &expr) -> std::ostream & {
       const auto &field_address_expr = to_field_address_expr(expr);
@@ -51,18 +60,16 @@ void format_hooks()
 
   add_format_hook(
     ID_is_cstring, [](std::ostream &os, const exprt &expr) -> std::ostream & {
-      if(expr.operands().size() == 1)
-      {
-        const auto &is_cstring_expr = to_unary_expr(expr);
-        os << "is_cstring(" << format(is_cstring_expr.op()) << ')';
-      }
-      else
-      {
-        const auto &is_cstring_expr = to_binary_expr(expr);
-        os << "is_cstring(" << format(is_cstring_expr.op0()) << ", "
-           << format(is_cstring_expr.op1()) << ')';
-      }
-      return os;
+      const auto &is_cstring_expr = to_unary_expr(expr);
+      return os << "is_cstring(" << format(is_cstring_expr.op()) << ')';
+    });
+
+  add_format_hook(
+    ID_state_is_cstring,
+    [](std::ostream &os, const exprt &expr) -> std::ostream & {
+      const auto &is_cstring_expr = to_binary_expr(expr);
+      return os << "is_cstring(" << format(is_cstring_expr.op0()) << ", "
+                << format(is_cstring_expr.op1()) << ')';
     });
 }
 
