@@ -291,6 +291,23 @@ exprt simplify_is_cstring_expr(
       return or_exprt(new_is_cstring, is_zero);
     }
   }
+  else if(
+    pointer.id() == ID_address_of &&
+    to_address_of_expr(pointer).object().id() == ID_string_constant)
+  {
+    // is_cstring(ς, &"...")) --> true
+    return true_exprt();
+  }
+  else if(
+    pointer.id() == ID_element_address &&
+    to_element_address_expr(pointer).base().id() == ID_address_of &&
+    to_address_of_expr(to_element_address_expr(pointer).base()).object().id() ==
+      ID_string_constant)
+  {
+    // TODO: compare offset to length
+    // is_cstring(ς, element_address(&"...", 0))) --> true
+    return true_exprt();
+  }
 
   return std::move(src);
 }

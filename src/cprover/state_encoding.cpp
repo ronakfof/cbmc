@@ -340,9 +340,9 @@ exprt state_encodingt::address_rec(loct loc, const exprt &state, exprt expr)
     return evaluate_expr(loc, state, to_dereference_expr(expr).pointer());
   else if(expr.id() == ID_string_constant)
   {
-    // TBD.
-    throw incorrect_goto_program_exceptiont(
-      "can't do string literals", expr.source_location());
+    // we'll stick to 'address_of' here.
+    return address_of_exprt(
+      expr, pointer_type(to_array_type(expr.type()).element_type()));
   }
   else if(expr.id() == ID_array)
   {
