@@ -21,6 +21,7 @@ Author: Daniel Kroening, dkr@amazon.com
   "(safety)(no-assertions)"                                                    \
   "(solve)"                                                                    \
   "(inline)(no-inline)"                                                        \
+  "D:I:"                                                                       \
   "(show-goto-functions)(show-loops)"                                          \
   "(validate-goto-model)"                                                      \
   "(verbose)"
