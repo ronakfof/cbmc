@@ -1,0 +1,6 @@
+CORE
+aws_array_eq_ignore_case_contract.c
+--safety
+^EXIT=0$
+^SIGNAL=0$
+--
