@@ -1,6 +1,9 @@
-void iterate_over_string(const char *p)
-  __CPROVER_requires(__CPROVER_is_cstring(p))
+int main()
 {
+  const char *p;
+
+  __CPROVER_assume(__CPROVER_is_cstring(p));
+
   __CPROVER_size_t i = 0;
 
   while(p[i] != 0)
@@ -8,4 +11,6 @@ void iterate_over_string(const char *p)
   {
     i++;
   }
+
+  return 0;
 }

@@ -1,4 +1,4 @@
-KNOWNBUG
+CORE
 iterate_over_string1.c
 
 ^EXIT=0$
