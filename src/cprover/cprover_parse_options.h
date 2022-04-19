@@ -18,7 +18,7 @@ Author: Daniel Kroening, dkr@amazon.com
   "(help)?h(version)"                                                          \
   "(smt2)(text)(outfile):"                                                     \
   "(variables)"                                                                \
-  "(safety)"                                                                   \
+  "(safety)(no-assertions)"                                                    \
   "(solve)"                                                                    \
   "(inline)(no-inline)"                                                        \
   "(show-goto-functions)(show-loops)"                                          \

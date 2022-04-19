@@ -223,3 +223,24 @@ void c_safety_checks(goto_modelt &goto_model)
   for(auto &f : goto_model.goto_functions.function_map)
     c_safety_checks(f, ns);
 }
+
+void no_assertions(goto_functionst::function_mapt::value_type &f)
+{
+  auto &body = f.second.body;
+
+  for(auto it = body.instructions.begin(); it != body.instructions.end(); it++)
+  {
+    if(
+      it->is_assert() &&
+      it->source_location().get_property_class() == ID_assertion)
+    {
+      it->turn_into_skip();
+    }
+  }
+}
+
+void no_assertions(goto_modelt &goto_model)
+{
+  for(auto &f : goto_model.goto_functions.function_map)
+    no_assertions(f);
+}

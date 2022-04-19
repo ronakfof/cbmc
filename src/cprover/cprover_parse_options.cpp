@@ -110,6 +110,9 @@ int cprover_parse_optionst::main()
     if(cmdline.isset("safety"))
       c_safety_checks(goto_model);
 
+    if(cmdline.isset("no-assertions"))
+      no_assertions(goto_model);
+
     label_properties(goto_model);
 
     // bool perform_inlining = false;

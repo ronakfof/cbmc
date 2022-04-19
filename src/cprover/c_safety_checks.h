@@ -15,5 +15,6 @@ Author: Daniel Kroening, kroening@kroening.com
 class goto_modelt;
 
 void c_safety_checks(goto_modelt &);
+void no_assertions(goto_modelt &);
 
 #endif // CPROVER_CPROVER_C_SAFETY_CHECKS_H
