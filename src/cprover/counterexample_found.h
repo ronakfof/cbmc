@@ -19,6 +19,11 @@ Author:
 bool counterexample_found(
   const std::vector<framet> &,
   const workt &,
+  const std::unordered_set<symbol_exprt, irep_hash> &address_taken,
   const namespacet &);
+
+class bv_pointerst;
+
+void show_assignment(const bv_pointerst &);
 
 #endif // CPROVER_CPROVER_COUNTEREXAMPLE_FOUND_H

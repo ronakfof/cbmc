@@ -73,6 +73,14 @@ void format_hooks()
     });
 
   add_format_hook(
+    ID_state_r_ok, [](std::ostream &os, const exprt &expr) -> std::ostream & {
+      const auto &r_ok_expr = to_ternary_expr(expr);
+      return os << "r_ok(" << format(r_ok_expr.op0()) << ", "
+                << format(r_ok_expr.op1()) << ", " << format(r_ok_expr.op2())
+                << ')';
+    });
+
+  add_format_hook(
     ID_state_live_object,
     [](std::ostream &os, const exprt &expr) -> std::ostream & {
       const auto &live_object_expr = to_binary_expr(expr);

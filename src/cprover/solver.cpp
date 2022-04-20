@@ -201,6 +201,7 @@ bool is_subsumed(
   const std::vector<exprt> &a1,
   const std::vector<exprt> &a2,
   const exprt &b,
+  const std::unordered_set<symbol_exprt, irep_hash> &address_taken,
   const namespacet &ns)
 {
   if(b.is_true())
@@ -214,38 +215,30 @@ bool is_subsumed(
     if(a_conjunct == b)
       return true; // b is subsumed by a conjunct in a
 
-  // Invariant is empty? (true)
-  if(a1.empty() && a2.empty())
-    return false; // Doesn't subsume anything.
-
   cout_message_handlert message_handler;
   satcheckt satcheck(message_handler);
   bv_pointerst solver(ns, satcheck, message_handler);
+  axiomst axioms(address_taken, ns);
 
   // check if a => b is valid,
   // or (!a || b) is valid,
   // or (a && !b) is unsat
   for(auto &a_conjunct : a1)
-    solver.set_to_true(replace_evaluate(a_conjunct));
+    axioms << a_conjunct;
 
   for(auto &a_conjunct : a2)
-    solver.set_to_true(replace_evaluate(a_conjunct));
+    axioms << a_conjunct;
 
-  solver.set_to_false(replace_evaluate(b));
+  axioms.set_to_false(b);
 
   // instantiate our axioms
-  for(auto &a_conjunct : a1)
-    axioms(a_conjunct, solver);
-
-  for(auto &a_conjunct : a2)
-    axioms(a_conjunct, solver);
-
-  axioms(b, solver);
+  axioms.emit(solver);
 
   // now run solver
   switch(solver())
   {
   case decision_proceduret::resultt::D_SATISFIABLE:
+    show_assignment(solver);
     return false;
   case decision_proceduret::resultt::D_UNSATISFIABLE:
     return true;
@@ -281,14 +274,14 @@ void solver(
 
   std::vector<workt> queue;
 
-  auto propagator = [&frames, &frame_map, &queue, &ns](
+  auto propagator = [&frames, &frame_map, &queue, &address_taken, &ns](
                       const symbol_exprt &symbol, exprt invariant) {
     auto &f = frames[find_frame(frame_map, symbol).index];
 
     std::cout << "F: " << format(symbol) << " <- " << format(invariant) << '\n';
 
     // check if already subsumed
-    if(is_subsumed(f.invariants, f.auxiliaries, invariant, ns))
+    if(is_subsumed(f.invariants, f.auxiliaries, invariant, address_taken, ns))
     {
       std::cout << "*** SUBSUMED\n";
     }
@@ -311,7 +304,7 @@ void solver(
     dump(frames, property, true, true);
     std::cout << '\n';
 
-    if(counterexample_found(frames, work, ns))
+    if(counterexample_found(frames, work, address_taken, ns))
     {
       property.status = propertyt::REFUTED;
       return;

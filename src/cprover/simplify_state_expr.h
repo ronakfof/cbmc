@@ -1,27 +1,21 @@
 /*******************************************************************\
 
-Module: Propagate
+Module: Simplify State Expression
 
 Author:
 
 \*******************************************************************/
 
 /// \file
-/// Propagate
+/// Simplify State Expression
 
-#ifndef CPROVER_CPROVER_PROPAGATE_H
-#define CPROVER_CPROVER_PROPAGATE_H
+#ifndef CPROVER_CPROVER_SIMPLIFY_STATE_EXPR_H
+#define CPROVER_CPROVER_SIMPLIFY_STATE_EXPR_H
 
-#include "solver_types.h"
+#include <util/namespace.h>
+#include <util/std_expr.h>
 
 #include <unordered_set>
-
-void propagate(
-  const std::vector<framet> &,
-  const workt &,
-  const std::unordered_set<symbol_exprt, irep_hash> &address_taken,
-  const namespacet &,
-  const std::function<void(const symbol_exprt &, exprt)> &propagator);
 
 exprt simplify_state_expr(
   exprt,

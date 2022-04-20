@@ -15,6 +15,7 @@ SRC = address_taken.cpp \
       may_alias.cpp \
       propagate.cpp \
       report_properties.cpp \
+      simplify_state_expr.cpp \
       state.cpp \
       state_encoding.cpp \
       state_encoding_targets.cpp \

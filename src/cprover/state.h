@@ -191,8 +191,6 @@ inline const allocate_exprt &to_allocate_expr(const exprt &expr)
   return ret;
 }
 
-exprt replace_evaluate(exprt);
-
 extern const irep_idt ID_state_is_cstring;
 extern const irep_idt ID_state_live_object;
 extern const irep_idt ID_state_object_size;
