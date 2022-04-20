@@ -71,5 +71,13 @@ void format_hooks()
       return os << "is_cstring(" << format(is_cstring_expr.op0()) << ", "
                 << format(is_cstring_expr.op1()) << ')';
     });
+
+  add_format_hook(
+    ID_state_live_object,
+    [](std::ostream &os, const exprt &expr) -> std::ostream & {
+      const auto &live_object_expr = to_binary_expr(expr);
+      return os << "live_object(" << format(live_object_expr.op0()) << ", "
+                << format(live_object_expr.op1()) << ')';
+    });
 }
 

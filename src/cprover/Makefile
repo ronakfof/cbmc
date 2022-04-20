@@ -1,4 +1,5 @@
 SRC = address_taken.cpp \
+      axioms.cpp \
       c_safety_checks.cpp \
       console.cpp \
       cprover_main.cpp \

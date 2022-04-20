@@ -19,6 +19,7 @@ Author:
 #include <solvers/sat/satcheck.h>
 
 #include "address_taken.h"
+#include "axioms.h"
 #include "console.h"
 #include "counterexample_found.h"
 #include "free_symbols.h"
@@ -221,7 +222,9 @@ bool is_subsumed(
   satcheckt satcheck(message_handler);
   bv_pointerst solver(ns, satcheck, message_handler);
 
-  // check if a => b, or (!a || b), or (a && !b) is unsat
+  // check if a => b is valid,
+  // or (!a || b) is valid,
+  // or (a && !b) is unsat
   for(auto &a_conjunct : a1)
     solver.set_to_true(replace_evaluate(a_conjunct));
 
@@ -230,6 +233,16 @@ bool is_subsumed(
 
   solver.set_to_false(replace_evaluate(b));
 
+  // instantiate our axioms
+  for(auto &a_conjunct : a1)
+    axioms(a_conjunct, solver);
+
+  for(auto &a_conjunct : a2)
+    axioms(a_conjunct, solver);
+
+  axioms(b, solver);
+
+  // now run solver
   switch(solver())
   {
   case decision_proceduret::resultt::D_SATISFIABLE:
