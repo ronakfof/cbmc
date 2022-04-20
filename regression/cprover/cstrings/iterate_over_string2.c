@@ -7,7 +7,7 @@ int main()
   __CPROVER_size_t i = 0;
 
   while(p[i] != 0)
-    __CPROVER_loop_invariant(__CPROVER_is_cstring(p) && i>=0 && i<=__CPROVER_cstrlen(p))
+    __CPROVER_loop_invariant(__CPROVER_is_cstring(p + i))
   {
     i++;
   }
