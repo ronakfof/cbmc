@@ -1,8 +1,7 @@
-CORE
+CORE broken-smt-backend
 main.c
---little-endian --full-slice
+--pointer-check --slice-formula
 ^EXIT=0$
 ^SIGNAL=0$
 ^VERIFICATION SUCCESSFUL$
 --
-^warning: ignoring
