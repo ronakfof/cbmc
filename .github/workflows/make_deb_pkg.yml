@@ -58,9 +58,6 @@ jobs:
           deb_package_name="$(ls *.deb)"
           echo "::set-output name=deb_package::./build/$deb_package_name"
           echo "::set-output name=deb_package_name::ubuntu-20.04-$deb_package_name"
-      - name: Get release info
-        id: get_release_info
-        uses: bruceadams/get-release@v1.2.0
       - name: Upload deb package as artifact
         uses: actions/upload-artifact@main
         with:
