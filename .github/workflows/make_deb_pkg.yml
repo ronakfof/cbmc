@@ -19,7 +19,7 @@ jobs:
         run: z3 --version
       - name: Download cvc-5 from the releases page and make sure it can be deployed
         run: |
-          wget -O cvc5 https://github.com/cvc5/cvc5/releases/download/cvc5-${{env.cvc5-version}}/cvc5-Linux
+          wget -O cvc5 https://github.com/cvc5/cvc5/releases/download/cvc5-1.0.0/cvc5-Linux
           chmod u+x cvc5
           mv cvc5 /usr/local/bin
           cvc5 --version
