@@ -1,0 +1,69 @@
+name: build_cbmc_package
+on:
+  workflow_dispatch:
+
+jobs:
+  ubuntu-20_04-package:
+    runs-on: ubuntu-20.04
+    env:
+      GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+    steps:
+      - uses: actions/checkout@v3
+        with:
+          submodules: recursive
+      - name: Fetch dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install --no-install-recommends -y g++ gdb flex bison cmake ninja-build maven jq libxml2-utils dpkg-dev ccache z3
+      - name: Confirm z3 solver is available and log the version installed
+        run: z3 --version
+      - name: Download cvc-5 from the releases page and make sure it can be deployed
+        run: |
+          wget -O cvc5 https://github.com/cvc5/cvc5/releases/download/cvc5-${{env.cvc5-version}}/cvc5-Linux
+          chmod u+x cvc5
+          mv cvc5 /usr/local/bin
+          cvc5 --version
+      - name: Prepare ccache
+        uses: actions/cache@v2
+        with:
+          path: .ccache
+          key: ${{ runner.os }}-20.04-Release-${{ github.ref }}-${{ github.sha }}-RELEASEPKG
+          restore-keys: |
+            ${{ runner.os }}-20.04-Release-${{ github.ref }}
+            ${{ runner.os }}-20.04-Release
+      - name: ccache environment
+        run: |
+          echo "CCACHE_BASEDIR=$PWD" >> $GITHUB_ENV
+          echo "CCACHE_DIR=$PWD/.ccache" >> $GITHUB_ENV
+      - name: Configure CMake
+        run: |
+          mkdir build
+          cd build
+          cmake .. -G Ninja -DCMAKE_BUILD_TYPE=Release
+      - name: Zero ccache stats and limit in size
+        run: ccache -z --max-size=500M
+      - name: Build using Ninja
+        run: |
+          cd build
+          ninja -j2
+      - name: Print ccache stats
+        run: ccache -s
+      - name: Run CTest
+        run: cd build; ctest . -V -L CORE -C Release -j2
+      - name: Create packages
+        id: create_packages
+        run: |
+          cd build
+          ninja package
+          deb_package_name="$(ls *.deb)"
+          echo "::set-output name=deb_package::./build/$deb_package_name"
+          echo "::set-output name=deb_package_name::ubuntu-20.04-$deb_package_name"
+      - name: Get release info
+        id: get_release_info
+        uses: bruceadams/get-release@v1.2.0
+      - name: Upload deb package as artifact
+        uses: actions/upload-artifact@main
+        with:
+          name: ${{ steps.create_packages.outputs.deb_package_name }}
+          path: ${{ steps.create_packages.outputs.deb_package }}
+
